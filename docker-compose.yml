@@ -1,6 +1,16 @@
-version: "3"
+version: "3.8"
 services:
   cassandra:
-    image: cassandra
+    image: cassandra:3.11.6
+    container_name: cassandradb
+    restart: always
     volumes:
-      - ./data/cassandra:/var/lib/cassandra
+      - $HOME/docker/volumes/cassandra:/var/lib/cassandra
+    ports: 
+      - 7000:7000
+      - 7001:7001
+      - 7199:7199
+      - 9042:9042
+      - 9160:9160
+    
+

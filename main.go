@@ -7,38 +7,52 @@ import (
 	"github.com/gocql/gocql"
 )
 
+type EmployeByID struct {
+	ID       int
+	Name     string
+	Position string
+}
+
 func main() {
 	// connect to the cluster
-	cluster := gocql.NewCluster("127.0.0.1:7199")
-	cluster.Keyspace = "example"
-	cluster.Consistency = gocql.Quorum
-	session, _ := cluster.CreateSession()
+	cluster := gocql.NewCluster("127.0.0.1")
+	cluster.Port = 9042
+	cluster.ProtoVersion = 4
+	cluster.Keyspace = "test_keyspace"
+	cluster.Consistency = gocql.One
+
+	session, err := cluster.CreateSession()
+	if err != nil {
+		log.Printf("failed create cassandra session %v", err)
+	}
+
 	defer session.Close()
 
-	// insert a tweet
-	if err := session.Query("INSERT INTO tweet (timeline, id, text) VALUES (?, ?, ?)",
-		"me", gocql.TimeUUID(), "hello world").Exec(); err != nil {
+	fmt.Println("This is cassandra example")
+
+	// insert employee by id
+	if err := session.Query("INSERT INTO employee_by_id (id, name, position) VALUES (?, ?, ?)",
+		"2", "Reagan", "IT").Exec(); err != nil {
 		log.Println("Error : ", err)
 	}
 
-	var id gocql.UUID
-	var text string
+	var id int
+	var name string
 
-	/* Search for a specific set of records whose 'timeline' column matches
-	 * the value 'me'. The secondary index that we created earlier will be
-	 * used for optimizing the search */
-	if err := session.Query("SELECT id, text FROM tweet WHERE timeline = ? LIMIT 1",
-		"me").Consistency(gocql.One).Scan(&id, &text); err != nil {
+	if err := session.Query("SELECT id, name FROM employee_by_id WHERE id = ? LIMIT 1",
+		"2").Consistency(gocql.One).Scan(&id, &name); err != nil {
 		log.Println("Error : ", err)
 	}
-	fmt.Println("Tweet:", id, text)
+	fmt.Println("Employee By ID :", id, name)
 
-	// list all tweets
-	iter := session.Query("SELECT id, text FROM tweet WHERE timeline = ?", "me").Iter()
-	for iter.Scan(&id, &text) {
-		fmt.Println("Tweet:", id, text)
+	employee := &EmployeByID{}
+	iter := session.Query("SELECT * FROM employee_by_id").Iter()
+	for iter.Scan(&employee.ID, &employee.Name, &employee.Position) {
+		fmt.Println(employee.ID, employee.Name, employee.Position)
 	}
+
 	if err := iter.Close(); err != nil {
 		log.Println("Error : ", err)
 	}
+
 }
